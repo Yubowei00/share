@@ -1,0 +1,50 @@
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+
+# load data
+load("/Users/boweiyu/Arm project/chapter_1/data_set_oscillatory/6_esp/oscillatory_depth=95.rdata")
+data <- data_modified
+data <- data %>% filter(frame >= 1, frame <= 2000)
+
+# select node number
+node_id <- 100  
+node_data <- filter(data, node == node_id)
+
+# select y and frame
+time_series <- select(node_data, frame, y) 
+
+# y for psd
+y <- time_series$y
+
+# frequency
+sampling_rate <- 60  # 1s=60frame
+
+# function
+my_fft3 <- function(y, sampling_rate) {
+  N <- length(y)
+  s <- spectrum(y, plot = FALSE, method = "ar")  
+  LN <- length(s$spec[,1])
+  xx <- seq(0, sampling_rate/2, length.out = LN)  
+  df <- tibble(freq = xx,
+               spec = s$spec[,1],
+               log_freq = log10(xx),
+               log_spec = log10(s$spec[,1]),
+               method = s$method) %>%
+    filter(freq != 0)  
+  df
+}
+
+# calculate PSD
+psd_data <- my_fft3(y, sampling_rate)
+
+# plot
+psd_plot <- ggplot(psd_data, aes(x = freq, y = spec)) +
+  geom_line() +
+  labs(title = "Power Spectral Density (PSD) of depth=95 node=100",
+       x = "Frequency (Hz)",
+       y = "Spectral Density") +
+  theme_minimal()
+
+
+print(psd_plot)
